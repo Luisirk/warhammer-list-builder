@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
 
 function App() {
   const [facciones, setFacciones] = useState([]);
   const [selectedFaction, setSelectedFaction] = useState('');
   const [unidades, setUnidades] = useState([]);
-  const [userList, setUserList] = useState([]); // Nuevo estado para la lista del usuario
+  const [userList, setUserList] = useState([]);
   const [error, setError] = useState(null);
   const [loadingFacciones, setLoadingFacciones] = useState(true);
   const [loadingUnidades, setLoadingUnidades] = useState(false);
@@ -59,12 +59,17 @@ function App() {
   };
 
   const handleAddToList = (unidad) => {
-    setUserList([...userList, unidad]); // Añade la unidad al array userList
+    setUserList([...userList, unidad]);
   };
 
   const handleRemoveFromList = (unidadToRemove) => {
     setUserList(userList.filter(unidad => unidad.id_unidad !== unidadToRemove.id_unidad));
   };
+
+  // Calcula el coste total de la lista usando useMemo para eficiencia
+  const totalCost = useMemo(() => {
+    return userList.reduce((total, unidad) => total + unidad.coste_puntos, 0);
+  }, [userList]); // Se recalcula solo cuando cambia userList
 
   if (loadingFacciones) {
     return <div>Cargando facciones...</div>;
@@ -117,6 +122,10 @@ function App() {
             </li>
           ))}
         </ul>
+      )}
+
+      {userList.length > 0 && (
+        <h3>Coste Total: {totalCost} puntos</h3>
       )}
     </div>
   );
