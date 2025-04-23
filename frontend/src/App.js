@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import './App.css'; // Asegúrate de tener este archivo o crea tus propios estilos
+import './App.css';
 
 function App() {
   const [facciones, setFacciones] = useState([]);
+  const [selectedFaction, setSelectedFaction] = useState(''); // Estado para la facción seleccionada
+  const [unidades, setUnidades] = useState([]); // Estado para las unidades de la facción seleccionada
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true); // Para indicar si la carga está en curso
+  const [loadingFacciones, setLoadingFacciones] = useState(true);
+  const [loadingUnidades, setLoadingUnidades] = useState(false); // Nuevo estado para la carga de unidades
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/facciones') // La URL de tu backend para obtener las facciones
+    setLoadingFacciones(true);
+    fetch('http://localhost:5000/api/facciones')
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -16,28 +20,56 @@ function App() {
       })
       .then(data => {
         setFacciones(data);
-        setLoading(false); // La carga ha terminado
+        setLoadingFacciones(false);
       })
       .catch(error => {
         console.error('Error al obtener las facciones:', error);
         setError(error.message);
-        setLoading(false); // La carga ha terminado con un error
+        setLoadingFacciones(false);
       });
-  }, []); // El array vacío asegura que este efecto se ejecute solo una vez al montar el componente
+  }, []);
 
-  if (loading) {
+  useEffect(() => {
+    if (selectedFaction) {
+      setLoadingUnidades(true);
+      fetch(`http://localhost:5000/api/unidades/${selectedFaction}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          setUnidades(data);
+          setLoadingUnidades(false);
+        })
+        .catch(error => {
+          console.error(`Error al obtener las unidades de la facción ${selectedFaction}:`, error);
+          setError(error.message);
+          setLoadingUnidades(false);
+        });
+    } else {
+      setUnidades([]); 
+    }
+  }, [selectedFaction]); // Este efecto se ejecuta cuando cambia selectedFaction
+
+  const handleFactionChange = (event) => {
+    setSelectedFaction(event.target.value);
+  };
+
+  if (loadingFacciones) {
     return <div>Cargando facciones...</div>;
   }
 
   if (error) {
-    return <div>Error al cargar las facciones: {error}</div>;
+    return <div>Error: {error}</div>;
   }
 
   return (
     <div className="App">
       <h1>List Builder de Warhammer 40k</h1>
       <h2>Selecciona una facción:</h2>
-      <select>
+      <select value={selectedFaction} onChange={handleFactionChange}>
         <option value="">-- Selecciona una facción --</option>
         {facciones.map(faccion => (
           <option key={faccion.id_faccion} value={faccion.id_faccion}>
@@ -45,7 +77,23 @@ function App() {
           </option>
         ))}
       </select>
-      {/* Aquí irán los componentes para mostrar las unidades de la facción seleccionada */}
+
+      {selectedFaction && (
+        <div>
+          <h3>Unidades de {facciones.find(f => f.id_faccion === parseInt(selectedFaction))?.nombre || 'Facción Seleccionada'}</h3>
+          {loadingUnidades ? (
+            <div>Cargando unidades...</div>
+          ) : (
+            <ul>
+              {unidades.map(unidad => (
+                <li key={unidad.id_unidad}>
+                  {unidad.nombre} (Puntos: {unidad.coste_puntos})
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
